@@ -89,4 +89,6 @@ io.on('connection', (socket) => {
 
 // 优先使用云平台分配的端口，如果没有（比如在自己电脑上），则使用 3000
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`🚀 TeamHub Global V8.2 Live on port ${PORT}`));
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server is officially live on port ${PORT}`);
+});
