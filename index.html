@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TeamHub | Master Titan V13.1.Final</title>
+  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
+  <style>
+    :root { --apple-blue: #007AFF; --glass: rgba(255,255,255,0.7); --border: rgba(255,255,255,0.4); }
+    body { margin: 0; background: linear-gradient(135deg, #d2e3fc, #ffffff); height: 100vh; display: flex; flex-direction: column; font-family: -apple-system, sans-serif; overflow: hidden; }
+    #login-page { position: fixed; width:100%; height:100%; z-index:10000; display:flex; justify-content:center; align-items:center; background:rgba(255,255,255,0.2); backdrop-filter:blur(30px); }
+    .login-box { background:var(--glass); padding:40px; border-radius:30px; width:340px; text-align:center; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+    input { width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 12px; border: 1px solid #ddd; outline: none; box-sizing: border-box; }
+    button.primary { width: 100%; padding: 14px; background: var(--apple-blue); color: #fff; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; }
+    .auth-switch { font-size: 11px; color: var(--apple-blue); cursor: pointer; margin-top: 15px; display: block; }
+    #top-nav { height: 70px; display: none; align-items: center; justify-content: space-between; padding: 0 30px; background: rgba(255,255,255,0.5); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); }
+    .nav-links { display: flex; gap: 5px; }
+    .nav-item { padding: 10px 15px; cursor: pointer; border-radius: 12px; font-weight: 600; font-size: 12px; }
+    .nav-item.active { background: #000; color: #fff; }
+    #app-container { display: none; flex: 1; overflow: hidden; }
+    .view { display: none; width: 100%; height: 100%; }
+    .view.active { display: flex; }
+    .sidebar { width: 280px; background: rgba(255,255,255,0.2); backdrop-filter: blur(20px); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+    .sidebar-header { padding: 30px 25px 15px; display: flex; justify-content: space-between; align-items: center; }
+    .sidebar-header h2 { margin: 0; font-size: 22px; font-weight: 800; }
+    .add-plus-btn { font-size: 28px; color: var(--apple-blue); cursor: pointer; user-select: none; transition: 0.2s; line-height: 1; }
+    .add-plus-btn:hover { transform: scale(1.2); }
+    .list-item { padding: 12px 20px; cursor: pointer; margin: 4px 12px; border-radius: 12px; font-weight: 500; font-size: 14px; transition: 0.3s; display: flex; justify-content: space-between; align-items: center;}
+    .list-item.active { background: #fff !important; color: var(--apple-blue); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    #messages-area { flex:1; padding:25px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
+    .msg-bubble { padding:10px 15px; border-radius:18px; font-size:15px; white-space: pre-wrap; word-wrap: break-word; }
+    .msg-wrapper.me { align-self:flex-end; } .msg-wrapper.me .msg-bubble { background:var(--apple-blue); color:#fff; border-bottom-right-radius:4px; }
+    .msg-wrapper.other { align-self:flex-start; } .msg-wrapper.other .msg-bubble { background:#E9E9EB; color:#000; border-bottom-left-radius:4px; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; padding: 40px; width: 100%; overflow-y: auto; align-content: flex-start;}
+    .card { background: white; padding: 25px; border-radius: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    .poll-option { padding: 12px; background: #f2f2f7; border-radius: 12px; margin: 8px 0; cursor: pointer; position: relative; overflow: hidden; }
+    .poll-progress { position: absolute; left: 0; top: 0; height: 100%; background: var(--apple-blue); opacity: 0.15; transition: width 0.6s; width: 0; }
+    #modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.2); backdrop-filter: blur(15px); z-index: 50000; justify-content: center; align-items: center; }
+    .modal { background: #fff; padding: 40px; border-radius: 35px; width: 320px; text-align: center; }
+  </style>
+</head>
+<body>
+
+  <div id="login-page">
+    <div class="login-box" id="auth-login"><h1>Sign In</h1><input id="login-u" placeholder="Username"><input type="password" id="login-p" placeholder="Password"><button onclick="doLogin()" class="primary">Enter Hub</button><span class="auth-switch" onclick="toggleAuth(true)">Register Member</span></div>
+    <div class="login-box" id="auth-reg" style="display:none"><h1>New Member</h1><input id="reg-u" placeholder="Username"><input type="password" id="reg-p" placeholder="Password"><input id="reg-i" type="password" placeholder="Secret Code"><button onclick="doRegister()" class="primary">Create Account</button><span class="auth-switch" onclick="toggleAuth(false)">Back to Login</span></div>
+  </div>
+
+  <nav id="top-nav">
+    <div style="font-weight: 800; font-size: 20px;">Titan Workspace</div>
+    <div class="nav-links">
+      <div class="nav-item active" id="btn-chat" onclick="switchV('chat')">Chat</div>
+      <div class="nav-item" id="btn-doc" onclick="switchV('doc')">Docs</div>
+      <div class="nav-item" id="btn-task" onclick="switchV('task')">Tasks</div>
+      <div class="nav-item" id="btn-link" onclick="switchV('link')">Links</div>
+      <div class="nav-item" id="btn-poll" onclick="switchV('poll')">Voting</div>
+      <div class="nav-item" id="btn-tool" onclick="switchV('tool')">Spin</div>
+    </div>
+    <div id="user-display" style="opacity:0.5; font-size:11px;"></div>
+  </nav>
+
+  <div id="app-container">
+    <div id="view-chat" class="view active"><div class="sidebar"><div class="sidebar-header"><h2>Groups</h2><span class="add-plus-btn" onclick="showM('modal-group')">+</span></div><div id="group-list"></div><div id="admin-panel" style="display:none; padding:15px;"><button onclick="socket.emit('get-all-users'); showM('modal-users')" style="width:100%; border-radius:10px; padding:8px; background:#000; color:#fff; cursor:pointer; font-size:11px;">Manage Users</button></div></div><div style="flex:1; display:flex; flex-direction:column;"><div id="messages-area"></div><div style="padding:20px 40px; display:flex; gap:15px; align-items:center;"><span onclick="document.getElementById('file-in').click()" style="cursor:pointer; font-size:22px;">📁</span><input type="file" id="file-in" style="display:none"><textarea id="msg-input" placeholder="iMessage" style="flex:1; height:45px; border-radius:20px; padding:12px; border:1px solid #ddd; outline:none; resize:none; font-family:inherit;"></textarea><button onclick="sendMsg()" style="background:var(--apple-blue); color:#fff; border:none; width:45px; height:45px; border-radius:50%; cursor:pointer;">↑</button></div></div></div>
+    <div id="view-doc" class="view"><div class="sidebar"><div class="sidebar-header"><h2>Docs</h2><span class="add-plus-btn" onclick="showM('modal-doc')">+</span></div><div id="doc-list"></div></div><div style="flex:1; display:flex; flex-direction:column;"><div style="padding:10px 40px; background:rgba(255,255,255,0.3); border-bottom:1px solid #eee;"><button onclick="exportDoc('txt')" style="padding:6px 12px; border-radius:8px; cursor:pointer;">TXT</button><button onclick="exportDoc('docx')" style="padding:6px 12px; border-radius:8px; cursor:pointer;">DOCX</button></div><div style="flex:1; overflow-y:auto; padding:30px;"><div id="canvas" style="background:#fff; border-radius:15px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.05); min-height:100%"><div id="quill-editor"></div></div></div></div></div>
+    <div id="view-task" class="view"><div class="card-grid" id="task-list"></div><button onclick="showM('modal-task')" style="position:fixed; right:30px; bottom:30px; padding:15px 30px; border-radius:30px; background:#000; color:#fff; border:none; cursor:pointer; font-weight:700;">+ Task</button></div>
+    <div id="view-link" class="view"><div class="sidebar"><div class="sidebar-header"><h2>Links</h2><span class="add-plus-btn" onclick="showM('modal-link')">+</span></div><div id="link-list"></div></div><iframe id="ext-frame" style="flex:1; border:none; background:#fff;"></iframe></div>
+    <div id="view-poll" class="view"><div class="card-grid" id="poll-list"></div><button onclick="showM('modal-poll')" style="position:fixed; right:30px; bottom:30px; padding:15px 30px; border-radius:30px; background:var(--apple-blue); color:#fff; border:none; cursor:pointer; font-weight:700;">+ Poll</button></div>
+    <div id="view-tool" class="view" style="flex-direction:column; align-items:center; justify-content:center;"><h1>Spinner</h1><input id="wheel-in" style="width:300px;"><button onclick="spin()" class="primary" style="width:150px;">SPIN</button><div id="wheel-res" style="font-size:32px; font-weight:800; margin-top:20px; color:var(--apple-blue);"></div></div>
+  </div>
+
+  <div id="modal-overlay">
+    <div class="modal" id="modal-doc" style="display:none;"><h2>New Doc</h2><input id="doc-n"><button class="primary" onclick="confDoc()">Create</button></div>
+    <div class="modal" id="modal-group" style="display:none;"><h2>New Group</h2><input id="group-n"><button class="primary" onclick="confGroup()">Create</button></div>
+    <div class="modal" id="modal-task" style="display:none;"><h2>New Task</h2><input id="task-t"><input type="datetime-local" id="task-d"><button class="primary" onclick="confTask()">Add</button></div>
+    <div class="modal" id="modal-link" style="display:none;"><h2>New Link</h2><input id="link-n" placeholder="Name"><input id="link-u" placeholder="https://"><button class="primary" onclick="confLink()">Add</button></div>
+    <div class="modal" id="modal-poll" style="display:none;"><h2>New Poll</h2><input id="poll-q" placeholder="Question"><input id="poll-o" placeholder="A, B, C"><button class="primary" onclick="confPoll()">Launch</button></div>
+    <div class="modal" id="modal-users" style="display:none; width:400px;"><h2>Members</h2><div id="user-manage-list" style="max-height:300px; overflow-y:auto; text-align:left;"></div><button onclick="hideM()">Close</button></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let myName = "", myRole = "", currentRoom = 'General', currentDocId = 'Main', quill, currentLink = "";
+
+    // Auth
+    function toggleAuth(r){ document.getElementById('auth-login').style.display=r?'none':'block'; document.getElementById('auth-reg').style.display=r?'block':'none'; }
+    function doRegister(){ socket.emit('register', {username:document.getElementById('reg-u').value, password:document.getElementById('reg-p').value, invite:document.getElementById('reg-i').value}); }
+    function doLogin(){ socket.emit('login', {username:document.getElementById('login-u').value, password:document.getElementById('login-p').value}); }
+    socket.on('auth_error', (m)=>alert(m));
+    socket.on('auth_success', (m)=>{ alert(m); toggleAuth(false); });
+
+    socket.on('login_success', (data) => {
+      myName = data.username; myRole = data.role;
+      document.getElementById('login-page').style.display='none'; document.getElementById('top-nav').style.display='flex';
+      document.getElementById('app-container').style.display='flex'; document.getElementById('user-display').textContent = myName.toUpperCase();
+      if(myRole==='admin') document.getElementById('admin-panel').style.display='block';
+      initQuill(); renderDocs(data.documents); renderG(data.groups); renderT(data.tasks); renderL(data.externalLinks); renderP(data.polls);
+      data.history.forEach(m => appendM(m));
+    });
+
+    // --- Voting Launch Logic (FIXED) ---
+    function confPoll() {
+        const q = document.getElementById('poll-q').value;
+        const o = document.getElementById('poll-o').value;
+        if(q && o) {
+            const optionsArray = o.split(',').map(x => ({ name: x.trim() }));
+            socket.emit('create-poll', { question: q, options: optionsArray });
+            hideM();
+            document.getElementById('poll-q').value = '';
+            document.getElementById('poll-o').value = '';
+        }
+    }
+
+    // Others (Unchanged)
+    function switchV(v) { document.querySelectorAll('.view').forEach(el=>el.classList.remove('active')); document.getElementById('view-'+v).classList.add('active'); document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active')); document.getElementById('btn-'+v).classList.add('active'); }
+    function renderG(l) { const c=document.getElementById('group-list'); c.innerHTML=''; l.forEach(n => { const d=document.createElement('div'); d.className='list-item '+(n===currentRoom?'active':''); d.textContent=n; d.onclick=()=>{ currentRoom=n; document.getElementById('messages-area').innerHTML=''; renderG(l); socket.emit('switch room', n); }; c.appendChild(d); }); }
+    function renderDocs(docs) { const l=document.getElementById('doc-list'); l.innerHTML=''; for(let id in docs){ const d=document.createElement('div'); d.className='list-item '+(id===currentDocId?'active':''); d.textContent=docs[id].title; d.onclick=()=>{ currentDocId=id; quill.root.innerHTML=docs[id].content; renderDocs(docs); }; l.appendChild(d); } }
+    function renderT(list) { const c=document.getElementById('task-list'); c.innerHTML=''; list.forEach(t => { const d=document.createElement('div'); d.className='card'; let btn = t.status==='pending'? `<button onclick="socket.emit('claim-task',${t.id})" class="primary">Claim</button>` : `<p style="color:var(--apple-blue)">Resp: ${t.assignee}</p>`; d.innerHTML = `<h3>${t.title}</h3><p style="font-size:11px; opacity:0.6;">Due: ${t.deadline||'None'}</p>${btn}<div onclick="socket.emit('delete-task',${t.id})" style="color:red; font-size:11px; cursor:pointer; margin-top:10px;">Delete</div>`; c.appendChild(d); }); }
+    function renderP(list) { const c = document.getElementById('poll-list'); c.innerHTML = ''; list.forEach(p => { const total = p.options.reduce((s, o) => s + (o.votes || 0), 0); const div = document.createElement('div'); div.className='card'; div.innerHTML=`<h3>${p.question}</h3>`; p.options.forEach((o, i) => { const pct = total===0?0:Math.round(o.votes/total*100); const od = document.createElement('div'); od.className='poll-option'; od.innerHTML = `<div class="poll-progress" style="width:${pct}%"></div><div style="position:relative; z-index:2; display:flex; justify-content:space-between; font-size:13px;"><span>${o.name}</span><span>${pct}% (${o.votes})</span></div>`; od.onclick = () => socket.emit('cast-vote', {pollId: p.id, optIdx: i}); div.appendChild(od); }); c.appendChild(div); }); }
+    function renderL(list) { const c = document.getElementById('link-list'); c.innerHTML=''; list.forEach(l => { const d = document.createElement('div'); d.className='list-item '+(l.url===currentLink?'active':''); d.innerHTML=`<span style="flex:1">● ${l.name}</span><a href="${l.url}" target="_blank" style="text-decoration:none; color:#888;">↗</a>`; d.querySelector('span').onclick=()=>{ currentLink=l.url; document.getElementById('ext-frame').src=l.url; renderL(list); }; c.appendChild(d); }); }
+    function exportDoc(t) { const blob = t==='txt' ? new Blob([quill.getText()], {type:'text/plain'}) : htmlDocx.asBlob(quill.root.innerHTML); const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`Doc_${Date.now()}.${t}`; a.click(); }
+    function initQuill() { quill = new Quill('#quill-editor', { theme: 'snow', modules: { table:true, toolbar: [[{header:[1,2,false]}],['bold','italic','table'],['image','bullet']] } }); quill.on('text-change', (d, o, s) => { if(s==='user') socket.emit('edit-doc', {docId:currentDocId, content:quill.root.innerHTML}); }); }
+    socket.on('update-doc-content', d => { if(d.docId===currentDocId && quill.root.innerHTML!==d.content) quill.root.innerHTML=d.content; });
+    socket.on('update-doc-list', d => renderDocs(d));
+    socket.on('update-tasks', t => renderT(t));
+    socket.on('update-polls', p => renderP(p));
+    socket.on('update-groups', g => renderG(g));
+    socket.on('update-links', l => renderL(l));
+    socket.on('chat message', m => appendM(m));
+    socket.on('room history', h => { document.getElementById('messages-area').innerHTML = ''; h.forEach(m => appendM(m)); });
+    socket.on('spin-result', d => { const r=document.getElementById('wheel-res'); r.textContent="..."; setTimeout(()=>{r.textContent=`🎯 ${d.winner} (${d.user})`;}, 800); });
+    socket.on('user-list', (list) => { const c = document.getElementById('user-manage-list'); c.innerHTML = ''; list.forEach(u => { const div = document.createElement('div'); div.style.padding = "10px"; div.style.borderBottom = "1px solid #eee"; div.style.display="flex"; div.style.justifyContent="space-between"; div.innerHTML = `<span>${u}</span> ${u==='admin'?'':`<button onclick="socket.emit('delete-user','${u}')" style="color:red">Delete</button>`}`; c.appendChild(div); }); });
+    function spin() { const i=document.getElementById('wheel-in').value.split(',').filter(x=>x.trim()); if(i.length) socket.emit('spin-request', i); }
+    function showM(id) { document.getElementById('modal-overlay').style.display='flex'; document.getElementById(id).style.display='block'; }
+    function hideM() { document.getElementById('modal-overlay').style.display='none'; document.querySelectorAll('.modal').forEach(m=>m.style.display='none'); }
+    function confDoc() { socket.emit('create-doc', document.getElementById('doc-n').value); hideM(); }
+    function confGroup() { socket.emit('create-group', document.getElementById('group-n').value); hideM(); }
+    function confTask() { socket.emit('create-task', {title:document.getElementById('task-t').value, deadline:document.getElementById('task-d').value}); hideM(); }
+    function confLink() { socket.emit('add-link', {name:document.getElementById('link-n').value, url:document.getElementById('link-u').value}); hideM(); }
+    function appendM(d) { const a=document.getElementById('messages-area'), w=document.createElement('div'), isMe=d.username===myName; w.className = 'msg-wrapper ' + (isMe?'me':'other'); let content = d.type==='file' ? (d.isImage ? `<img src="${d.fileUrl}" class="chat-img" onclick="window.open('${d.fileUrl}')">` : `<a href="${d.fileUrl}" download="${d.fileName}" class="chat-file">📄 ${d.fileName}</a>`) : `<div class="msg-bubble">${d.text}</div>`; w.innerHTML = `<div style="font-size:10px; opacity:0.5; padding:0 10px;">${isMe?'':d.username}</div>${content}`; a.appendChild(w); a.scrollTop = a.scrollHeight; }
+    function sendMsg() { const i=document.getElementById('msg-input'); if(i.value.trim()){ socket.emit('chat message', {text:i.value.trim()}); i.value=''; } }
+    document.getElementById('msg-input').onkeydown=(e)=>{ if(e.key==='Enter' && !e.ctrlKey){ e.preventDefault(); sendMsg(); } else if(e.key==='Enter') e.target.value+='\n'; };
+  </script>
+</body>
+</html>
+
